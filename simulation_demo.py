@@ -83,7 +83,7 @@ class Background(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.left, self.rect.top = location
 
-BackGround = Background('simulation_demo.files/background.png', [10,10])
+BackGround = Background('simulation_demo.files/background.png', [20,40])
 
 ### parse a line from the trace file and check for mobility ###
 def parseline(f):

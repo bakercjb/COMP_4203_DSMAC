@@ -1,10 +1,10 @@
 
-0                 SN.node[0].MobilityManager               initial location(x:y:z) is 17:1:0
-0                 SN.node[1].MobilityManager               initial location(x:y:z) is 0:0:0
-0                 SN.node[2].MobilityManager               initial location(x:y:z) is 0:0:0
-0                 SN.node[3].MobilityManager               initial location(x:y:z) is 0:0:0
-0                 SN.node[4].MobilityManager               initial location(x:y:z) is 0:0:0
-0                 SN.node[5].MobilityManager               initial location(x:y:z) is 0:0:0
+0                 SN.node[0].MobilityManager               initial location(x:y:z) is 5:5:0
+0                 SN.node[1].MobilityManager               initial location(x:y:z) is 8:4:0
+0                 SN.node[2].MobilityManager               initial location(x:y:z) is 3:4:0
+0                 SN.node[3].MobilityManager               initial location(x:y:z) is 6:5:0
+0                 SN.node[4].MobilityManager               initial location(x:y:z) is 5:1:0
+0                 SN.node[5].MobilityManager               initial location(x:y:z) is 6:2:0
 0.003536244016    SN.node[1].Application                   Not sending packets
 0.006066428963    SN.node[5].Application                   Not sending packets
 0.014545237179    SN.node[4].Application                   Not sending packets
