@@ -1,4 +1,4 @@
-git #!/usr/bin/env python simulation_demo.py
+#!/usr/bin/env python simulation_demo.py
 
 # The MIT License (MIT)
 
@@ -40,12 +40,12 @@ size_y = 100
 nodes = []
 
 try:
-    path = sys.argv[1]
+  path = sys.argv[1]
 except IndexError:
-    print("No Path given. Try something like this:")
-    print(">> python simuation_demo.py Simulations/radioTest/")
-    pygame.quit()
-    sys.exit()
+  print("No Path given. Try something like this:")
+  print(">> python simuation_demo.py Simulations/radioTest/")
+  pygame.quit()
+  sys.exit()
 
 ## colour are defined here
 blue  = pygame.Color(  0,  0,255)
@@ -57,12 +57,12 @@ inifile = path + 'omnetpp.ini'
 ini = open(inifile, 'r')
 regex = re.compile(r"(\d+)")
 for line in ini:
-    if "SN.field_x" in line:
-        match = regex.search(line)
-        size_x = int(match.group(1))
-    elif "SN.field_y" in line:
-        match = regex.search(line)
-        size_y = int(match.group(1))
+  if "SN.field_x" in line:
+    match = regex.search(line)
+    size_x = int(match.group(1))
+  elif "SN.field_y" in line:
+    match = regex.search(line)
+    size_y = int(match.group(1))
 ini.close()
 
 
@@ -74,70 +74,70 @@ regex_tx = re.compile(r"([0-9]+[\.[0-9]*]*)\D*([0-9]+)\D")
 
 ### This class draws the background image as a sprite.
 class Background(pygame.sprite.Sprite):
-    def __init__(self, image_file, location):
-        pygame.sprite.Sprite.__init__(self)  #call Sprite initializer
-        self.image = pygame.image.load(image_file)
-        self.rect = self.image.get_rect()
-        self.rect.left, self.rect.top = location
+  def __init__(self, image_file, location):
+    pygame.sprite.Sprite.__init__(self)  #call Sprite initializer
+    self.image = pygame.image.load(image_file)
+    self.rect = self.image.get_rect()
+    self.rect.left, self.rect.top = location
 
 BackGround = Background('simulation_demo.files/background.png', [20,40])
 
 ### parse a line from the trace file and check for mobility ###
 def parseline(f):
-    line = f.readline()
-    if "initial location" in line:
-        match = regex_movement.match(line)
-        if match:
-            # print (match.group(2)) ## DEBUG statement, refactor out.
-            # print (str(match.group(1)) + ", " + str(match.group(2)) + ", " + str(match.group(3)) + ":" + str(match.group(4)) + ":" + str(match.group(5)))
-            node_color = blue
-            node = int(match.group(2))
-            (x,y,z) = (int(float(match.group(3))), int(float(match.group(4))), node_color)
-            new_node = (match.group(2),(match.group(3), match.group(4)), node_color)
-            nodes.append(new_node)
-# handles if a node changes location.
-    if "changed location" in line:
-          match = regex_movement.match(line)
-          if match:
-              node_color = blue
-              node = int(match.group(2))
-              (x,y,z) = (int(float(match.group(3))), int(float(match.group(4))), node_color)
-              nodes[node] = (node, (x,y), z)
+  line = f.readline()
+  if "initial location" in line:
+    match = regex_movement.match(line)
+    if match:
+      node_color = blue
+      #node = int(match.group(2))
+      (x,y,z) = (int(float(match.group(3))), int(float(match.group(4))), node_color)
+      new_node = (match.group(2),(match.group(3), match.group(4)), node_color)
+      nodes.append(new_node)
 
-# handles if a node sends a packet.              
-    if "Sending packet" in line:
-          match = regex_tx.match(line)
-          if match:
-              node_color = red
-              node = int(match.group(2))
-              nodes[node] = nodes[node]
+### handles if a node changes location.
+  if "changed location" in line:
+    match = regex_movement.match(line)
+    if match:
+      node_color = blue
+      node = int(match.group(2))
+      (x,y,z) = (int(float(match.group(3))), int(float(match.group(4))), node_color)
+      nodes[node] = (node, (x,y), z)
 
-    return nodes
+### handles if a node sends a packet.              
+  if "Sending packet" in line:
+    match = regex_tx.match(line)
+    if match:
+      node_color = red
+      node = int(match.group(2))
+      tnode = nodes[node] # this is just a temporary node used for readability. 
+      (x,y,z) = (tnode[1][0], tnode[1][1], node_color)
+      nodes[node] = (node, (x,y), z)
+      
+  return nodes
 
 
 ### Main loop of "Game" ###
 while True:
-    nodes = parseline(f)
-    screen.fill(white)
-    screen.blit(BackGround.image, BackGround.rect)
+  nodes = parseline(f)
+  screen.fill(white)
+  screen.blit(BackGround.image, BackGround.rect)
 
-    # print nodes
+### print nodes
+  for node in nodes:
+    x = int(int(node[1][0]) * res_x/size_x)
+    y = int(int(node[1][1]) * res_y/size_y)
+    node_color = pygame.Color(node[2][0],node[2][1],node[2][2])
+    pygame.draw.circle(screen, node_color, (x,y), 10, 0)
 
-    for node in nodes:
-        x = int(int(node[1][0]) * res_x/size_x)
-        y = int(int(node[1][1]) * res_y/size_y)
-        node_color = pygame.Color(node[2][0],node[2][1],node[2][2])
-        pygame.draw.circle(screen, node_color, (x,y), 10, 0)
+  for event in pygame.event.get():
+    if event.type == pygame.QUIT:
+      pygame.quit()
+      f.close()
+      sys.exit()
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            f.close()
-            sys.exit()
+    elif event.type == pygame.KEYDOWN:
+      if event.key == pygame.K_ESCAPE:
+        pygame.event.post(pygame.event.Event(pygame.QUIT))
 
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                pygame.event.post(pygame.event.Event(pygame.QUIT))
-
-    pygame.display.update()
+  pygame.display.update()
 fpsClock.tick(30)
