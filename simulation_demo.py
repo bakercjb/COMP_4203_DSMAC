@@ -1,4 +1,4 @@
-#!/usr/bin/env python simulation_demo.py
+git #!/usr/bin/env python simulation_demo.py
 
 # The MIT License (MIT)
 
@@ -47,10 +47,10 @@ except IndexError:
     pygame.quit()
     sys.exit()
 
-
-blue = pygame.Color(0,0,255)
+## colour are defined here
+blue  = pygame.Color(  0,  0,255)
 white = pygame.Color(255,255,255)
-
+red   = pygame.Color(255,  0,  0)
 
 ### Read omnetpp.ini file to get field size ###
 inifile = path + 'omnetpp.ini'
@@ -60,20 +60,17 @@ for line in ini:
     if "SN.field_x" in line:
         match = regex.search(line)
         size_x = int(match.group(1))
-        print ("size_x set to %d" %size_x)
     elif "SN.field_y" in line:
         match = regex.search(line)
         size_y = int(match.group(1))
-        print ("size_y set to %d" %size_y)
-    # elif "SN.numNodes" in line:
-    #     match = regex.match(line)
 ini.close()
 
 
 ### Open Tracefile ###
 tracefile = path + 'Castalia-Trace.txt'
 f = open(tracefile, "r")
-regex = re.compile(r"([0-9]+[\.[0-9]*]*)\D*([0-9]+)\D*([0-9]+[\.[0-9]*]*):([0-9]+[\.[0-9]*]*):([0-9]+[\.[0-9]*]*)")
+regex_movement = re.compile(r"([0-9]+[\.[0-9]*]*)\D*([0-9]+)\D*([0-9]+[\.[0-9]*]*):([0-9]+[\.[0-9]*]*):([0-9]+[\.[0-9]*]*)")
+regex_tx = re.compile(r"([0-9]+[\.[0-9]*]*)\D*([0-9]+)\D")
 
 ### This class draws the background image as a sprite.
 class Background(pygame.sprite.Sprite):
@@ -89,23 +86,31 @@ BackGround = Background('simulation_demo.files/background.png', [20,40])
 def parseline(f):
     line = f.readline()
     if "initial location" in line:
-        match = regex.match(line)
+        match = regex_movement.match(line)
         if match:
-            # print match.group(2)
-            # print str(match.group(1)) + ", " + str(match.group(2)) + ", " + str(match.group(3)) + ":" + str(match.group(4)) + ":" + str(match.group(5))
+            # print (match.group(2)) ## DEBUG statement, refactor out.
+            # print (str(match.group(1)) + ", " + str(match.group(2)) + ", " + str(match.group(3)) + ":" + str(match.group(4)) + ":" + str(match.group(5)))
+            node_color = blue
             node = int(match.group(2))
-            (x,y) = (int(float(match.group(3))), int(float(match.group(4))))
-            # print node, x, y
-            new_node = (match.group(2),(match.group(3), match.group(4)))
+            (x,y,z) = (int(float(match.group(3))), int(float(match.group(4))), node_color)
+            new_node = (match.group(2),(match.group(3), match.group(4)), node_color)
             nodes.append(new_node)
-
+# handles if a node changes location.
     if "changed location" in line:
-          match = regex.match(line)
+          match = regex_movement.match(line)
           if match:
+              node_color = blue
               node = int(match.group(2))
-              (x,y) = (int(float(match.group(3))), int(float(match.group(4))))
-              # print node, x, y
-              nodes[node] = (node, (x,y))
+              (x,y,z) = (int(float(match.group(3))), int(float(match.group(4))), node_color)
+              nodes[node] = (node, (x,y), z)
+
+# handles if a node sends a packet.              
+    if "Sending packet" in line:
+          match = regex_tx.match(line)
+          if match:
+              node_color = red
+              node = int(match.group(2))
+              nodes[node] = nodes[node]
 
     return nodes
 
@@ -119,11 +124,10 @@ while True:
     # print nodes
 
     for node in nodes:
-        # print "node " + str(node)
-        # print node[1][0]
         x = int(int(node[1][0]) * res_x/size_x)
         y = int(int(node[1][1]) * res_y/size_y)
-        pygame.draw.circle(screen, blue, (x,y), 10, 0)
+        node_color = pygame.Color(node[2][0],node[2][1],node[2][2])
+        pygame.draw.circle(screen, node_color, (x,y), 10, 0)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:

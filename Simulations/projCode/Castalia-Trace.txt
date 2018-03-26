@@ -1,5 +1,5 @@
 
-0                 SN.node[0].MobilityManager               initial location(x:y:z) is 5:5:0
+0                 SN.node[0].MobilityManager               initial location(x:y:z) is 4:5:0
 0                 SN.node[1].MobilityManager               initial location(x:y:z) is 8:4:0
 0                 SN.node[2].MobilityManager               initial location(x:y:z) is 3:4:0
 0                 SN.node[3].MobilityManager               initial location(x:y:z) is 6:5:0
