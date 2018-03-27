@@ -22,32 +22,75 @@
 /**
  * Enum generated from <tt>src/node/communication/mac/dsmac/DSMACPacket.msg:19</tt> by nedtool.
  * <pre>
- * enum DSMACFrameTypeDef
+ * enum DSMACPacket_type
  * {
  * 
- *     DATA_FRAME = 1;
- *     BEACON_FRAME = 2;
+ *     MAC_DSMAC_BEACON_PACKET = 1001;
+ *     MAC_DSMAC_ASSOCIATE_PACKET = 1002;
+ *     MAC_DSMAC_DATA_PACKET = 1003;
+ *     MAC_DSMAC_ACK_PACKET = 1004;
+ *     MAC_DSMAC_GTS_REQUEST_PACKET = 1005;
  * }
  * </pre>
  */
-enum DSMACFrameTypeDef {
-    DATA_FRAME = 1,
-    BEACON_FRAME = 2
+enum DSMACPacket_type {
+    MAC_DSMAC_BEACON_PACKET = 1001,
+    MAC_DSMAC_ASSOCIATE_PACKET = 1002,
+    MAC_DSMAC_DATA_PACKET = 1003,
+    MAC_DSMAC_ACK_PACKET = 1004,
+    MAC_DSMAC_GTS_REQUEST_PACKET = 1005
 };
 
 /**
- * Class generated from <tt>src/node/communication/mac/dsmac/DSMACPacket.msg:24</tt> by nedtool.
+ * Struct generated from src/node/communication/mac/dsmac/DSMACPacket.msg:27 by nedtool.
+ */
+struct DSMACGTSspec
+{
+    DSMACGTSspec();
+    int owner;
+    int start;
+    int length;
+};
+
+void doPacking(cCommBuffer *b, DSMACGTSspec& a);
+void doUnpacking(cCommBuffer *b, DSMACGTSspec& a);
+
+/**
+ * Class generated from <tt>src/node/communication/mac/dsmac/DSMACPacket.msg:33</tt> by nedtool.
  * <pre>
  * packet DSMACPacket extends MacPacket
  * {
- *     int frameType @enum(DSMACFrameTypeDef);
+ *     int DSMACPacketType @enum(DSMACPacket_type);
+ *     int PANid;
+ *     int srcID;
+ *     int dstID;
+ *     int seqNum;
+ * 
+ *     // those fields belong to beacon packet (MAC_DSMAC_BEACON_PACKET)
+ *     int beaconOrder;
+ *     int frameOrder;
+ *     int BSN;
+ *     int CAPlength;
+ *     int GTSlength;
+ *     DSMACGTSspec GTSlist[];
  * }
  * </pre>
  */
 class DSMACPacket : public ::MacPacket
 {
   protected:
-    int frameType_var;
+    int DSMACPacketType_var;
+    int PANid_var;
+    int srcID_var;
+    int dstID_var;
+    int seqNum_var;
+    int beaconOrder_var;
+    int frameOrder_var;
+    int BSN_var;
+    int CAPlength_var;
+    int GTSlength_var;
+    DSMACGTSspec *GTSlist_var; // array ptr
+    unsigned int GTSlist_arraysize;
 
   private:
     void copy(const DSMACPacket& other);
@@ -66,8 +109,31 @@ class DSMACPacket : public ::MacPacket
     virtual void parsimUnpack(cCommBuffer *b);
 
     // field getter/setter methods
-    virtual int getFrameType() const;
-    virtual void setFrameType(int frameType);
+    virtual int getDSMACPacketType() const;
+    virtual void setDSMACPacketType(int DSMACPacketType);
+    virtual int getPANid() const;
+    virtual void setPANid(int PANid);
+    virtual int getSrcID() const;
+    virtual void setSrcID(int srcID);
+    virtual int getDstID() const;
+    virtual void setDstID(int dstID);
+    virtual int getSeqNum() const;
+    virtual void setSeqNum(int seqNum);
+    virtual int getBeaconOrder() const;
+    virtual void setBeaconOrder(int beaconOrder);
+    virtual int getFrameOrder() const;
+    virtual void setFrameOrder(int frameOrder);
+    virtual int getBSN() const;
+    virtual void setBSN(int BSN);
+    virtual int getCAPlength() const;
+    virtual void setCAPlength(int CAPlength);
+    virtual int getGTSlength() const;
+    virtual void setGTSlength(int GTSlength);
+    virtual void setGTSlistArraySize(unsigned int size);
+    virtual unsigned int getGTSlistArraySize() const;
+    virtual DSMACGTSspec& getGTSlist(unsigned int k);
+    virtual const DSMACGTSspec& getGTSlist(unsigned int k) const {return const_cast<DSMACPacket*>(this)->getGTSlist(k);}
+    virtual void setGTSlist(unsigned int k, const DSMACGTSspec& GTSlist);
 };
 
 inline void doPacking(cCommBuffer *b, DSMACPacket& obj) {obj.parsimPack(b);}
