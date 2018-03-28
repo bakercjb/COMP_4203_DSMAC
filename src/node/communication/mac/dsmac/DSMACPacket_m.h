@@ -61,7 +61,7 @@ void doUnpacking(cCommBuffer *b, DSMACGTSspec& a);
  * packet DSMACPacket extends MacPacket
  * {
  *     int DSMACPacketType @enum(DSMACPacket_type);
- *     int PANid;
+ *     int leaderNodeid;
  *     int srcID;
  *     int dstID;
  *     int seqNum;
@@ -80,7 +80,7 @@ class DSMACPacket : public ::MacPacket
 {
   protected:
     int DSMACPacketType_var;
-    int PANid_var;
+    int leaderNodeid_var;
     int srcID_var;
     int dstID_var;
     int seqNum_var;
@@ -111,8 +111,8 @@ class DSMACPacket : public ::MacPacket
     // field getter/setter methods
     virtual int getDSMACPacketType() const;
     virtual void setDSMACPacketType(int DSMACPacketType);
-    virtual int getPANid() const;
-    virtual void setPANid(int PANid);
+    virtual int getLeaderNodeid() const;
+    virtual void setLeaderNodeid(int leaderNodeid);
     virtual int getSrcID() const;
     virtual void setSrcID(int srcID);
     virtual int getDstID() const;

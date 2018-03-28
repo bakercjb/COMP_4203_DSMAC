@@ -25,7 +25,7 @@ void DSMAC::startup()
 		stateDescr[1003] = "MAC_STATE_GTS";
 	}
 
-	isPANCoordinator = par("isPANCoordinator");
+	isLeaderNode = par("isLeaderNode");
 	isFFD = par("isFFD");
 
 	// CAP-related parameters
@@ -63,7 +63,7 @@ void DSMAC::startup()
 	// General MAC initialisation
 	currentPacket = NULL;
 	macState = MAC_STATE_SETUP;
-	associatedPAN = -1;
+	associatedLeaderNode = -1;
 	currentFrameStart = 0;
 	GTSstart = 0;
 	GTSend = 0;
@@ -81,12 +81,12 @@ void DSMAC::startup()
 	declareOutput("pkt TX state breakdown");
 	
 	// Coordinator initialisation
-	if (isPANCoordinator) {
+	if (isLeaderNode) {
 		if (!isFFD) {
-			opp_error("Only full-function devices (isFFD=true) can be PAN coordinators");
+			opp_error("Only full-function devices (isFFD=true) can be leader nodes");
 		}
 
-		associatedPAN = SELF_MAC_ADDRESS;
+		associatedLeaderNode = SELF_MAC_ADDRESS;
 		macBSN = genk_intrand(0, 255) + 1;
 		
 		//initialise frameOrder and beaconOrder 
@@ -115,10 +115,10 @@ void DSMAC::timerFiredCallback(int index)
 		
 		// Start of a new superframe
 		case FRAME_START: {
-			if (isPANCoordinator) {	// as a PAN coordinator, create and broadcast beacon packet
-				beaconPacket = new DSMACPacket("PAN beacon packet", MAC_LAYER_PACKET);
+			if (isLeaderNode) {	// as a leader node, create and broadcast beacon packet
+				beaconPacket = new DSMACPacket("Leader node beacon packet", MAC_LAYER_PACKET);
 				beaconPacket->setDstID(BROADCAST_MAC_ADDRESS);
-				beaconPacket->setPANid(SELF_MAC_ADDRESS);
+				beaconPacket->setLeaderNodeid(SELF_MAC_ADDRESS);
 				beaconPacket->setDSMACPacketType(MAC_DSMAC_BEACON_PACKET);
 				beaconPacket->setBeaconOrder(beaconOrder);
 				beaconPacket->setFrameOrder(frameOrder);
@@ -134,7 +134,7 @@ void DSMAC::timerFiredCallback(int index)
 				CAPend = CAPlength * baseSlotDuration * (1 << frameOrder) * symbolLen;
 				sentBeacons++;
 
-				trace() << "Transmitting [PAN beacon packet] now, BSN = " << macBSN;
+				trace() << "Transmitting [Leader node beacon packet] now, BSN = " << macBSN;
 				setMacState(MAC_STATE_CAP);
 				toRadioLayer(beaconPacket);
 				toRadioLayer(createRadioCommand(SET_STATE, TX));
@@ -143,7 +143,7 @@ void DSMAC::timerFiredCallback(int index)
 
 				currentFrameStart = getClock() + phyDelayRx2Tx;
 				setTimer(FRAME_START, beaconInterval * symbolLen);
-			} else {	// if not a PAN coordinator, then wait for beacon
+			} else {	// if not a leader node, then wait for beacon
 				toRadioLayer(createRadioCommand(SET_STATE, RX));
 				setTimer(BEACON_TIMEOUT, guardTime * 3);
 			}
@@ -173,14 +173,14 @@ void DSMAC::timerFiredCallback(int index)
 		case BEACON_TIMEOUT: {
 			lostBeacons++;
 			if (lostBeacons >= maxLostBeacons) {
-				trace() << "Lost synchronisation with PAN " << associatedPAN;
+				trace() << "Lost synchronisation with leader node " << associatedLeaderNode;
 				setMacState(MAC_STATE_SETUP);
-				associatedPAN = -1;
+				associatedLeaderNode = -1;
 				desyncTimeStart = getClock();
-				disconnectedFromPAN_node();
-				if (currentPacket) clearCurrentPacket("No PAN");
-			} else if (associatedPAN != -1) {
-				trace() << "Missed beacon from PAN " << associatedPAN <<
+				disconnectedFromLeader_node();
+				if (currentPacket) clearCurrentPacket("No leader node");
+			} else if (associatedLeaderNode != -1) {
+				trace() << "Missed beacon from leader node " << associatedLeaderNode <<
 				    ", will wake up to receive next beacon in " <<
 				    beaconInterval * symbolLen - guardTime * 3 << " seconds";
 				setMacState(MAC_STATE_SLEEP);
@@ -256,7 +256,7 @@ void DSMAC::timerFiredCallback(int index)
 			// when beacon is received, but node is not (yet) connected.
 			// So when this timer fires and node is not connected, it 
 			// has to go back to setup stage
-			if (associatedPAN == -1) setMacState(MAC_STATE_SETUP);
+			if (associatedLeaderNode == -1) setMacState(MAC_STATE_SETUP);
 		}
 	}
 }
@@ -267,7 +267,7 @@ void DSMAC::fromNetworkLayer(cPacket * pkt, int dstMacAddress)
 {
 	DSMACPacket *macPacket = new DSMACPacket("DSMAC data packet", MAC_LAYER_PACKET);
 	encapsulatePacket(macPacket, pkt);
-	macPacket->setSrcID(SELF_MAC_ADDRESS);	//if connected to PAN, would have a short MAC address assigned,
+	macPacket->setSrcID(SELF_MAC_ADDRESS);	//if connected to leader node, would have a short MAC address assigned,
 											//but we are not using short addresses in this model
 	macPacket->setDstID(dstMacAddress);
 	macPacket->setDSMACPacketType(MAC_DSMAC_DATA_PACKET);
@@ -299,17 +299,17 @@ void DSMAC::finishSpecific()
 		} else if (iter->first.find("CSfail") != string::npos) {
 			collectOutput("Packet breakdown", "Failed, busy channel", iter->second);
 		} else if (iter->first.find("NoPAN") != string::npos) {
-			collectOutput("Packet breakdown", "Failed, no PAN", iter->second);
+			collectOutput("Packet breakdown", "Failed, no leader node", iter->second);
 		} else {
 			trace() << "Unknown packet breakdonw category: " <<
 				iter->first << " with " << iter->second << " packets";
 		}
 	}
 
-	if (!isPANCoordinator) {
+	if (!isLeaderNode) {
 		if (desyncTime > 0) {
-			declareOutput("Fraction of time without PAN connection");
-			collectOutput("Fraction of time without PAN connection", "",
+			declareOutput("Fraction of time without leader node connection");
+			collectOutput("Fraction of time without leader node connection", "",
 				SIMTIME_DBL(desyncTime) / SIMTIME_DBL(getClock()));
 		}
 		declareOutput("Beacons received");
@@ -332,20 +332,20 @@ void DSMAC::setMacState(int newState)
 	macState = newState;
 }
 
-DSMACPacket *DSMAC::newConnectionRequest(int PANid) {
-	DSMACPacket *result = new DSMACPacket("PAN associate request", MAC_LAYER_PACKET);
-	result->setDstID(PANid);
-	result->setPANid(PANid);
+DSMACPacket *DSMAC::newConnectionRequest(int leaderNodeid) {
+	DSMACPacket *result = new DSMACPacket("Leader node connection request", MAC_LAYER_PACKET);
+	result->setDstID(leaderNodeid);
+	result->setLeaderNodeid(leaderNodeid);
 	result->setDSMACPacketType(MAC_DSMAC_ASSOCIATE_PACKET);
 	result->setSrcID(SELF_MAC_ADDRESS);
 	result->setByteLength(COMMAND_PKT_SIZE);
 	return result;
 }
 
-DSMACPacket *DSMAC::newGtsRequest(int PANid, int slots) {
+DSMACPacket *DSMAC::newGtsRequest(int leaderNodeid, int slots) {
 	DSMACPacket *result = new DSMACPacket("GTS request", MAC_LAYER_PACKET);
-	result->setPANid(PANid);
-	result->setDstID(PANid);
+	result->setLeaderNodeid(leaderNodeid);
+	result->setDstID(leaderNodeid);
 	result->setDSMACPacketType(MAC_DSMAC_GTS_REQUEST_PACKET);
 	result->setSrcID(SELF_MAC_ADDRESS);
 	result->setGTSlength(slots);
@@ -371,17 +371,17 @@ void DSMAC::fromRadioLayer(cPacket * pkt, double rssi, double lqi)
 
 		/* received a BEACON frame */
 		case MAC_DSMAC_BEACON_PACKET: {
-			if (isPANCoordinator)
-				break;			//PAN coordinators ignore beacons from other PANs
-			if (associatedPAN != -1 && associatedPAN != rcvPacket->getPANid()) 
-				break;			//Ignore, if associated to another PAN
+			if (isLeaderNode)
+				break;			//Leader nodes ignore beacons from other leader nodes
+			if (associatedLeaderNode != -1 && associatedLeaderNode != rcvPacket->getLeaderNodeid()) 
+				break;			//Ignore, if associated to another leader node
 			
 			
 			//cancel beacon timeout message (if present)
 			cancelTimer(BEACON_TIMEOUT);
 			recvBeacons++;
 
-			//this node is connected to this PAN (or will try to connect), update frame parameters
+			//this node is connected to this leader node (or will try to connect), update frame parameters
 			double offset = TX_TIME(rcvPacket->getByteLength());
 			currentFrameStart = getClock() - offset;	//frame start is in the past
 			lostBeacons = 0;
@@ -408,7 +408,7 @@ void DSMAC::fromRadioLayer(cPacket * pkt, double rssi, double lqi)
 			}
 
 			setMacState(MAC_STATE_CAP);
-			if (associatedPAN == rcvPacket->getPANid()) {
+			if (associatedLeaderNode == rcvPacket->getLeaderNodeid()) {
 				if (GTSstart != CAPend)
 					// set timer to sleep after CAP, unless GTS slots starts right after
 					setTimer(SLEEP_START, CAPend - offset);
@@ -430,22 +430,22 @@ void DSMAC::fromRadioLayer(cPacket * pkt, double rssi, double lqi)
 		// received request to associate
 		case MAC_DSMAC_ASSOCIATE_PACKET:{
 		
-			// only PAN coordinators can accept association requests
+			// only leader nodes can accept association requests
 			// if multihop communication is to be allowed - then this has to be changed
 			// in particular, any FFD can become a coordinator and accept requests
-			if (!isPANCoordinator)
+			if (!isLeaderNode)
 				break;
 
-			// if PAN id does not match - do nothing
-			if (rcvPacket->getPANid() != SELF_MAC_ADDRESS)
+			// if leader node id does not match - do nothing
+			if (rcvPacket->getLeaderNodeid() != SELF_MAC_ADDRESS)
 				break;
 
 			if (associationRequest_hub(rcvPacket)) {
 				trace() << "Accepting association request from " << rcvPacket->getSrcID();
 				// update associatedDevices and reply with an ACK
 				associatedDevices[rcvPacket->getSrcID()] = true;
-				DSMACPacket *ackPacket = new DSMACPacket("PAN associate response", MAC_LAYER_PACKET);
-				ackPacket->setPANid(SELF_MAC_ADDRESS);
+				DSMACPacket *ackPacket = new DSMACPacket("Leader node connection response", MAC_LAYER_PACKET);
+				ackPacket->setLeaderNodeid(SELF_MAC_ADDRESS);
 				ackPacket->setDSMACPacketType(MAC_DSMAC_ACK_PACKET);
 				ackPacket->setDstID(rcvPacket->getSrcID());
 				ackPacket->setByteLength(ACK_PKT_SIZE);
@@ -464,19 +464,19 @@ void DSMAC::fromRadioLayer(cPacket * pkt, double rssi, double lqi)
 		// received GTS request
 		case MAC_DSMAC_GTS_REQUEST_PACKET:{
 		
-			// only PAN coordinators can accept GTS requests
-			if (!isPANCoordinator)
+			// only leader nodes can accept GTS requests
+			if (!isLeaderNode)
 				break;
 				
-			// if PAN id does not match - do nothing	
-			if (rcvPacket->getPANid() != SELF_MAC_ADDRESS)
+			// if leader node id does not match - do nothing	
+			if (rcvPacket->getLeaderNodeid() != SELF_MAC_ADDRESS)
 				break;
 				
 			trace() << "Received GTS request from " << rcvPacket->getSrcID();
 			
 			// reply with an ACK
-			DSMACPacket *ackPacket = new DSMACPacket("PAN GTS response", MAC_LAYER_PACKET);
-			ackPacket->setPANid(SELF_MAC_ADDRESS);
+			DSMACPacket *ackPacket = new DSMACPacket("Leader node GTS response", MAC_LAYER_PACKET);
+			ackPacket->setLeaderNodeid(SELF_MAC_ADDRESS);
 			ackPacket->setDSMACPacketType(MAC_DSMAC_ACK_PACKET);
 			ackPacket->setDstID(rcvPacket->getSrcID());
 			ackPacket->setByteLength(ACK_PKT_SIZE);
@@ -514,7 +514,7 @@ void DSMAC::fromRadioLayer(cPacket * pkt, double rssi, double lqi)
 
 			// otherwise, generate and send an ACK
 			DSMACPacket *ackPacket = new DSMACPacket("Ack packet", MAC_LAYER_PACKET);
-			ackPacket->setPANid(SELF_MAC_ADDRESS);
+			ackPacket->setLeaderNodeid(SELF_MAC_ADDRESS);
 			ackPacket->setDSMACPacketType(MAC_DSMAC_ACK_PACKET);
 			ackPacket->setDstID(rcvPacket->getSrcID());
 			ackPacket->setSeqNum(rcvPacket->getSeqNum());
@@ -546,15 +546,15 @@ void DSMAC::handleAckPacket(DSMACPacket * rcvPacket)
 
 		//received an ack while waiting for a response to association request
 		case MAC_DSMAC_ASSOCIATE_PACKET: {
-			associatedPAN = rcvPacket->getPANid();
+			associatedLeaderNode = rcvPacket->getLeaderNodeid();
 			if (desyncTimeStart >= 0) {
 				desyncTime += getClock() - desyncTimeStart;
 				desyncTimeStart = -1;
 			}
-			trace() << "Associated with PAN:" << associatedPAN;
+			trace() << "Associated with leader node:" << associatedLeaderNode;
 			setMacState(MAC_STATE_CAP);
 			clearCurrentPacket("Success",true);
-			connectedToPAN_node();
+			connectedToLeader_node();
 			break;
 		}
 
@@ -613,7 +613,7 @@ void DSMAC::clearCurrentPacket(const char * s, bool success) {
 // one of the following happens:
 // 1) All transmission attempts were exausted (if specified)
 // 2) Delay limit was exceeded (if specified)
-// 3) Packet can not be delivered, e.g. if PAN connection is lost
+// 3) Packet can not be delivered, e.g. if leader node connection is lost
 // 4) transmitPacket called again, replacing the old packet
 void DSMAC::transmitPacket(DSMACPacket *pkt, int retries, bool state, double limit) {
 	clearCurrentPacket();
@@ -752,7 +752,7 @@ void DSMAC::collectPacketHistory(const char *s)
 //			otherwise accept only if there is room in the buffer
 bool DSMAC::acceptNewPacket(DSMACPacket *newPacket) 
 {
-	if (getAssociatedPAN() != -1 && getCurrentPacket() == NULL) {
+	if (getAssociatedLeaderNode() != -1 && getCurrentPacket() == NULL) {
 		transmitPacket(newPacket);
 		return true;
 	}
@@ -763,15 +763,15 @@ bool DSMAC::acceptNewPacket(DSMACPacket *newPacket)
 // ACTION:  if not associated to a PAN, create and transmit connection request
 void DSMAC::receiveBeacon_node(DSMACPacket *beacon) 
 {
-	if (getAssociatedPAN() == -1) 
-		transmitPacket(newConnectionRequest(beacon->getPANid()));
+	if (getAssociatedLeaderNode() == -1) 
+		transmitPacket(newConnectionRequest(beacon->getLeaderNodeid()));
 }
 
 // A function to react to packet transmission callback
 // ACTION: Simply transmit next packet from the buffer if associated to PAN
 void DSMAC::transmissionOutcome(DSMACPacket *pkt, bool success, string history) 
 {
-	if (getAssociatedPAN() != -1 && TXBuffer.size()) {
+	if (getAssociatedLeaderNode() != -1 && TXBuffer.size()) {
 		DSMACPacket *packet = check_and_cast<DSMACPacket*>(TXBuffer.front());
 		TXBuffer.pop();
 		transmitPacket(packet);

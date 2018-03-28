@@ -62,7 +62,7 @@ class DSMAC: public VirtualMac {
 	int phyBitsPerSymbol;
 	double phyDataRate;
 
-	map<int,bool> associatedDevices;	// map of assoicated devices (for PAN coordinator)
+	map<int,bool> associatedDevices;	// map of assoicated devices (for leader node)
 
     /*--- DSMAC state variables  ---*/
 	int macState;		// current MAC state
@@ -114,7 +114,7 @@ class DSMAC: public VirtualMac {
 
      /*--- The .ned file's parameters ---*/
 	bool printStateTransitions;
-	bool isPANCoordinator;
+	bool isLeaderNode;
 	bool isFFD;
 	bool batteryLifeExtention;
 	bool enableSlottedCSMA;
@@ -138,7 +138,7 @@ class DSMAC: public VirtualMac {
 	simtime_t GTSend;				// Absolute time of the end of GTS period for current node
 	simtime_t GTSlength;			// length of the GTS period for current node
 
-	int associatedPAN;	// ID of current PAN (-1 if not associated)
+	int associatedLeaderNode;	// ID of current LeaderNode (-1 if not associated)
 
   protected:
 
@@ -148,7 +148,7 @@ class DSMAC: public VirtualMac {
 	DSMACPacket *getCurrentPacket() { return currentPacket; }
 	void transmitPacket(DSMACPacket *pkt, int retries = 0, bool GTSonly = false, double delay = 0);
 	int getCurrentMacState() { return macState; }
-	int getAssociatedPAN() { return associatedPAN; }
+	int getAssociatedLeaderNode() { return associatedLeaderNode; }
 
 	/*--- Virtual interface functions can be overwritten by a decision module ---*/
 	virtual void startup();
@@ -162,8 +162,8 @@ class DSMAC: public VirtualMac {
 	virtual void prepareBeacon_hub(DSMACPacket *) {}
 
 	/*--- Node-specific desicions ---*/
-	virtual void connectedToPAN_node() {}
-	virtual void disconnectedFromPAN_node() {}
+	virtual void connectedToLeader_node() {}
+	virtual void disconnectedFromLeader_node() {}
 	virtual void assignedGTS_node(int) {}
 	virtual void receiveBeacon_node(DSMACPacket *);
 	virtual void startedGTS_node() {}

@@ -32,7 +32,7 @@ struct DSMACGTSspec {
 
 packet DSMACPacket extends MacPacket {
 	int DSMACPacketType enum (DSMACPacket_type);
-	int PANid;
+	int leaderNodeid;
 	int srcID;
 	int dstID;
 	int seqNum;

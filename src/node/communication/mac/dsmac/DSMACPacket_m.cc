@@ -285,7 +285,7 @@ Register_Class(DSMACPacket);
 DSMACPacket::DSMACPacket(const char *name, int kind) : ::MacPacket(name,kind)
 {
     this->DSMACPacketType_var = 0;
-    this->PANid_var = 0;
+    this->leaderNodeid_var = 0;
     this->srcID_var = 0;
     this->dstID_var = 0;
     this->seqNum_var = 0;
@@ -321,7 +321,7 @@ DSMACPacket& DSMACPacket::operator=(const DSMACPacket& other)
 void DSMACPacket::copy(const DSMACPacket& other)
 {
     this->DSMACPacketType_var = other.DSMACPacketType_var;
-    this->PANid_var = other.PANid_var;
+    this->leaderNodeid_var = other.leaderNodeid_var;
     this->srcID_var = other.srcID_var;
     this->dstID_var = other.dstID_var;
     this->seqNum_var = other.seqNum_var;
@@ -341,7 +341,7 @@ void DSMACPacket::parsimPack(cCommBuffer *b)
 {
     ::MacPacket::parsimPack(b);
     doPacking(b,this->DSMACPacketType_var);
-    doPacking(b,this->PANid_var);
+    doPacking(b,this->leaderNodeid_var);
     doPacking(b,this->srcID_var);
     doPacking(b,this->dstID_var);
     doPacking(b,this->seqNum_var);
@@ -358,7 +358,7 @@ void DSMACPacket::parsimUnpack(cCommBuffer *b)
 {
     ::MacPacket::parsimUnpack(b);
     doUnpacking(b,this->DSMACPacketType_var);
-    doUnpacking(b,this->PANid_var);
+    doUnpacking(b,this->leaderNodeid_var);
     doUnpacking(b,this->srcID_var);
     doUnpacking(b,this->dstID_var);
     doUnpacking(b,this->seqNum_var);
@@ -387,14 +387,14 @@ void DSMACPacket::setDSMACPacketType(int DSMACPacketType)
     this->DSMACPacketType_var = DSMACPacketType;
 }
 
-int DSMACPacket::getPANid() const
+int DSMACPacket::getLeaderNodeid() const
 {
-    return PANid_var;
+    return leaderNodeid_var;
 }
 
-void DSMACPacket::setPANid(int PANid)
+void DSMACPacket::setLeaderNodeid(int leaderNodeid)
 {
-    this->PANid_var = PANid;
+    this->leaderNodeid_var = leaderNodeid;
 }
 
 int DSMACPacket::getSrcID() const
@@ -589,7 +589,7 @@ const char *DSMACPacketDescriptor::getFieldName(void *object, int field) const
     }
     static const char *fieldNames[] = {
         "DSMACPacketType",
-        "PANid",
+        "leaderNodeid",
         "srcID",
         "dstID",
         "seqNum",
@@ -608,7 +608,7 @@ int DSMACPacketDescriptor::findField(void *object, const char *fieldName) const
     cClassDescriptor *basedesc = getBaseClassDescriptor();
     int base = basedesc ? basedesc->getFieldCount(object) : 0;
     if (fieldName[0]=='D' && strcmp(fieldName, "DSMACPacketType")==0) return base+0;
-    if (fieldName[0]=='P' && strcmp(fieldName, "PANid")==0) return base+1;
+    if (fieldName[0]=='l' && strcmp(fieldName, "leaderNodeid")==0) return base+1;
     if (fieldName[0]=='s' && strcmp(fieldName, "srcID")==0) return base+2;
     if (fieldName[0]=='d' && strcmp(fieldName, "dstID")==0) return base+3;
     if (fieldName[0]=='s' && strcmp(fieldName, "seqNum")==0) return base+4;
@@ -687,7 +687,7 @@ std::string DSMACPacketDescriptor::getFieldAsString(void *object, int field, int
     DSMACPacket *pp = (DSMACPacket *)object; (void)pp;
     switch (field) {
         case 0: return long2string(pp->getDSMACPacketType());
-        case 1: return long2string(pp->getPANid());
+        case 1: return long2string(pp->getLeaderNodeid());
         case 2: return long2string(pp->getSrcID());
         case 3: return long2string(pp->getDstID());
         case 4: return long2string(pp->getSeqNum());
@@ -712,7 +712,7 @@ bool DSMACPacketDescriptor::setFieldAsString(void *object, int field, int i, con
     DSMACPacket *pp = (DSMACPacket *)object; (void)pp;
     switch (field) {
         case 0: pp->setDSMACPacketType(string2long(value)); return true;
-        case 1: pp->setPANid(string2long(value)); return true;
+        case 1: pp->setLeaderNodeid(string2long(value)); return true;
         case 2: pp->setSrcID(string2long(value)); return true;
         case 3: pp->setDstID(string2long(value)); return true;
         case 4: pp->setSeqNum(string2long(value)); return true;
