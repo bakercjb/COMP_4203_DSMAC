@@ -1,32 +1,4 @@
-#!/usr/bin/env python simulation_demo.py
-
-# The MIT License (MIT)
-
-# Copyright (c) 2018 Carlos Amelunge, Christopher Baker, Robert Thompson
-
-# Based upon visualize_castalia.py code (c) 2014 Simon Hook
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
-import re
-import pygame, sys
-from pygame.locals import *
+import thorpy, pygame, re, sys
 
 pygame.init()
 fpsClock = pygame.time.Clock()
@@ -38,6 +10,7 @@ screen = pygame.display.set_mode((res_x, res_y))
 size_x = 100
 size_y = 100
 nodes = []
+global varset
 
 try:
   path = sys.argv[1]
@@ -47,10 +20,14 @@ except IndexError:
   pygame.quit()
   sys.exit()
 
+#define a font surface 
+spamSurface = pygame.font.SysFont('Arial', 20)
+
 ## colour are defined here
 blue  = pygame.Color(  0,  0,255)
 white = pygame.Color(255,255,255)
 red   = pygame.Color(255,  0,  0)
+green = pygame.Color(  0,255,  0) 
 
 ### Read omnetpp.ini file to get field size ###
 inifile = path + 'omnetpp.ini'
@@ -82,14 +59,17 @@ class Background(pygame.sprite.Sprite):
 
 BackGround = Background('simulation_demo.files/background.png', [20,40])
 
+
 ### parse a line from the trace file and check for mobility ###
 def parseline(f):
+  actioned = False
   line = f.readline()
   if "initial location" in line:
     match = regex_movement.match(line)
+    actioned = True
     if match:
       node_color = blue
-      #node = int(match.group(2))
+      node = int(match.group(2))
       (x,y,z) = (int(float(match.group(3))), int(float(match.group(4))), node_color)
       new_node = (match.group(2),(match.group(3), match.group(4)), node_color)
       nodes.append(new_node)
@@ -97,6 +77,7 @@ def parseline(f):
 ### handles if a node changes location.
   if "changed location" in line:
     match = regex_movement.match(line)
+    actioned = True
     if match:
       node_color = blue
       node = int(match.group(2))
@@ -106,38 +87,119 @@ def parseline(f):
 ### handles if a node sends a packet.              
   if "Sending packet" in line:
     match = regex_tx.match(line)
+    actioned = True
     if match:
       node_color = red
       node = int(match.group(2))
       tnode = nodes[node] # this is just a temporary node used for readability. 
       (x,y,z) = (tnode[1][0], tnode[1][1], node_color)
       nodes[node] = (node, (x,y), z)
-      
+
+### handles if a node sends a packet.              
+  if "Received packet #" in line:
+    match = regex_tx.match(line)
+    actioned = True
+    if match:
+      node_color = green
+      node = int(match.group(2))
+      tnode = nodes[node] # this is just a temporary node used for readability. 
+      (x,y,z) = (tnode[1][0], tnode[1][1], node_color)
+      nodes[node] = (node, (x,y), z)
+
+### reset active node colors back to default.   
+  if actioned == False:
+    match = regex_tx.match(line)
+    if match:
+      node_color = blue
+      node = int(match.group(2))
+      tnode = nodes[node] # this is just a temporary node used for readability. 
+      (x,y,z) = (tnode[1][0], tnode[1][1], node_color)
+      nodes[node] = (node, (x,y), z)
+
   return nodes
 
+def set_game_and_play():
+    ## TODO
+    # fix this if possible later. There is some sort of path thing happening
+    # p = subprocess.Popen(["bash", "simulation_demo.files/intAttNoDS.sh"], 
+    #                     stdout=subprocess.PIPE)
+    # output, err = p.communicate()
+    # print("*** Simulation has run ***\n", output)
+    if varset.get_value("Test One"):
+        print("Running test 1\n")
+    elif varset.get_value("Test Two"):
+        print("Running test 2\n")
+    elif varset.get_value("Test Three"):
+        print("Running test 3\n")
+    elif varset.get_value("Test Four"):
+        print("Running test 4\n")
+        
+    while True:
+      nodes = parseline(f)
+      screen.fill(white)
+      screen.blit(BackGround.image, BackGround.rect)
+    
+    ### print nodes
+      
+      for node in nodes:
+        x = int(int(node[1][0]) * res_x/size_x)
+        y = int(int(node[1][1]) * res_y/size_y)
+        node_color = pygame.Color(node[2][0],node[2][1],node[2][2])
+        pygame.draw.circle(screen, node_color, (x,y), 10, 0)
+        if node[2][2] == 0:
+          pygame.draw.circle(screen, node_color, (x,y), 10, 0)
+          
+      for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+          pygame.quit()
+          f.close()
+          sys.exit()
+    
+        elif event.type == pygame.KEYDOWN:
+          if event.key == pygame.K_ESCAPE:
+            sys.exit()
 
-### Main loop of "Game" ###
-while True:
-  nodes = parseline(f)
-  screen.fill(white)
-  screen.blit(BackGround.image, BackGround.rect)
+      #then, in your infinite cycle...   
+      eggsPixels = spamSurface.render(str("hello"), True, (0, 0, 0))
+      screen.blit(eggsPixels, (50, 50))    
 
-### print nodes
-  for node in nodes:
-    x = int(int(node[1][0]) * res_x/size_x)
-    y = int(int(node[1][1]) * res_y/size_y)
-    node_color = pygame.Color(node[2][0],node[2][1],node[2][2])
-    pygame.draw.circle(screen, node_color, (x,y), 10, 0)
+      pygame.display.update()
+      pygame.time.wait(100)
 
-  for event in pygame.event.get():
-    if event.type == pygame.QUIT:
-      pygame.quit()
-      f.close()
-      sys.exit()
+    fpsClock.tick(30)
+    return None    
 
-    elif event.type == pygame.KEYDOWN:
-      if event.key == pygame.K_ESCAPE:
-        pygame.event.post(pygame.event.Event(pygame.QUIT))
+METADATA_PATH = "./metadata" #create a file for storing data on application
+mdm = thorpy.MetaDataManager()
+mdm.read_data(METADATA_PATH)
+#try loading screen size and flags (with default values indicated as arguments)
+w,h,flags = mdm.get_display_data(METADATA_PATH, w=800, h=600, flags=0)
+app = thorpy.Application((w,h), "DSMAC Demonstration Application", flags=flags)
 
-  pygame.display.update()
-fpsClock.tick(30)
+thorpy.set_theme("human")
+mdm.load_font_data(METADATA_PATH)
+
+varset = thorpy.VarSet() #here we will declare options that user can set
+varset.add("Test One", value=False, text="Unauthenticated broadcast (no DSMAC)")
+varset.add("Test Two", value=False, text="Intelligent replay attack (no DSMAC)")
+varset.add("Test Three", value=False, text="Unauthenticated broadcast (with DSMAC)")
+varset.add("Test Four", value=False, text="Intelligent replay attack (with DSMAC)")
+
+e_options = thorpy.ParamSetterLauncher.make([varset], "Simulation options", "Options")
+
+e_sim1 = thorpy.make_button("Run simulation", 
+                            set_game_and_play)
+
+e_quit = thorpy.make_button("Quit", thorpy.functions.quit_menu_func)
+
+elements = [e_options,e_sim1,e_quit]
+#elements = [e_sim1,e_sim2,e_sim3,e_sim4,e_quit]
+e_background = thorpy.Background.make(elements=elements)
+thorpy.store(e_background)
+
+m_main = thorpy.Menu(e_background)
+m_main.play()
+
+app.quit()
+
+
