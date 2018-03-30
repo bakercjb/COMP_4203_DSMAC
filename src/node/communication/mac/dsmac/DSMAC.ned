@@ -34,7 +34,7 @@ simple DSMAC like node.communication.mac.iMac {
 	int baseSlotDuration = default (60);
 
 	int numSuperframeSlots = default (16);
-	int macMinBE = default (5);
+	int macMinBE = default (5); //Backoff Exponent
 	int macMaxBE = default (7);
 	int macMaxCSMABackoffs = default (4);
 	int macMaxFrameRetries = default (2);

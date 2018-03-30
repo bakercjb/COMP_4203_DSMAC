@@ -80,7 +80,7 @@ void DSMAC::startup()
 	packetBreak.clear();
 	declareOutput("pkt TX state breakdown");
 	
-	// Coordinator initialisation
+	// Leader node initialisation
 	if (isLeaderNode) {
 		if (!isFFD) {
 			opp_error("Only full-function devices (isFFD=true) can be leader nodes");
