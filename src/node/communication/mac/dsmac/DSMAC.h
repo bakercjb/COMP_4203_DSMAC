@@ -15,6 +15,8 @@
 
 #include <map>
 #include <vector>
+#include <iostream>
+#include <unordered_map>
 
 #include "VirtualMac.h"
 #include "DSMACPacket_m.h"
@@ -114,7 +116,7 @@ class DSMAC: public VirtualMac {
 
      /*--- The .ned file's parameters ---*/
 	bool printStateTransitions;
-	bool isLeaderNode;
+	bool isLeaderNode; // Checks if node is leaderNode
 	bool isFFD;
 	bool batteryLifeExtention;
 	bool enableSlottedCSMA;
@@ -139,6 +141,10 @@ class DSMAC: public VirtualMac {
 	simtime_t GTSlength;			// length of the GTS period for current node
 
 	int associatedLeaderNode;	// ID of current LeaderNode (-1 if not associated)
+	int sessionID; // current session id of node
+	int lastLeaderSessionID;
+	map<int,int> sessionIDMap;
+	//vector <int> blacklist;
 
   protected:
 
@@ -149,6 +155,11 @@ class DSMAC: public VirtualMac {
 	void transmitPacket(DSMACPacket *pkt, int retries = 0, bool GTSonly = false, double delay = 0);
 	int getCurrentMacState() { return macState; }
 	int getAssociatedLeaderNode() { return associatedLeaderNode; }
+
+	int getSessionID() { return sessionID; }
+	virtual void setSessionID(int);
+	int getLastLeaderSessionID() { return lastLeaderSessionID; }
+	virtual void setLastLeaderSessionID(int);
 
 	/*--- Virtual interface functions can be overwritten by a decision module ---*/
 	virtual void startup();

@@ -11,6 +11,7 @@
  ****************************************************************************/
 
 #include "DSMAC.h"
+#include <cstdlib>
 
 // This module is virtual and can not be used directly
 Define_Module(DSMAC); 
@@ -27,6 +28,8 @@ void DSMAC::startup()
 
 	isLeaderNode = par("isLeaderNode");
 	isFFD = par("isFFD");
+	//leaderPassword = par("leaderPassword");
+
 
 	// CAP-related parameters
 	minCAPLength = par("minCAPLength");
@@ -64,6 +67,10 @@ void DSMAC::startup()
 	currentPacket = NULL;
 	macState = MAC_STATE_SETUP;
 	associatedLeaderNode = -1;
+	
+	sessionID = 100; // sessionID
+	lastLeaderSessionID = 100;
+
 	currentFrameStart = 0;
 	GTSstart = 0;
 	GTSend = 0;
@@ -82,6 +89,7 @@ void DSMAC::startup()
 	
 	// Leader node initialisation
 	if (isLeaderNode) {
+	
 		if (!isFFD) {
 			opp_error("Only full-function devices (isFFD=true) can be leader nodes");
 		}
@@ -104,7 +112,14 @@ void DSMAC::startup()
 		if (beaconInterval <= 0 || frameInterval <= 0) {
 			opp_error("Invalid parameter combination of baseSlotDuration and numSuperframeSlots");
 		}
-		
+
+		// Initialize Leader node session ID table. 
+		sessionIDMap.insert(pair <int,int> (1, 100));
+		sessionIDMap.insert(pair <int,int> (2, 100));
+		sessionIDMap.insert(pair <int,int> (3, 100));
+		sessionIDMap.insert(pair <int,int> (4, 100));
+		sessionIDMap.insert(pair <int,int> (5, 90)); //outdated for "malicious node"
+
 		setTimer(FRAME_START, 0);	//frame start is NOW
 	}
 }
@@ -120,6 +135,10 @@ void DSMAC::timerFiredCallback(int index)
 				beaconPacket->setDstID(BROADCAST_MAC_ADDRESS);
 				beaconPacket->setLeaderNodeid(SELF_MAC_ADDRESS);
 				beaconPacket->setDSMACPacketType(MAC_DSMAC_BEACON_PACKET);
+				
+							
+				beaconPacket->setSessionIDPkt(getSessionID() + 1); // session ID packet
+
 				beaconPacket->setBeaconOrder(beaconOrder);
 				beaconPacket->setFrameOrder(frameOrder);
 				if (++macBSN > 255) macBSN = 0;
@@ -134,12 +153,14 @@ void DSMAC::timerFiredCallback(int index)
 				CAPend = CAPlength * baseSlotDuration * (1 << frameOrder) * symbolLen;
 				sentBeacons++;
 
-				trace() << "Transmitting [Leader node beacon packet] now, BSN = " << macBSN;
+				trace() << "Transmitting [Leader node beacon packet] now, BSN = " << macBSN << " LSID = " << getSessionID()+1;
 				setMacState(MAC_STATE_CAP);
 				toRadioLayer(beaconPacket);
 				toRadioLayer(createRadioCommand(SET_STATE, TX));
 				setTimer(ATTEMPT_TX, TX_TIME(beaconPacket->getByteLength()));
 				beaconPacket = NULL;
+
+				setSessionID(getSessionID() + 1); // increment session ID
 
 				currentFrameStart = getClock() + phyDelayRx2Tx;
 				setTimer(FRAME_START, beaconInterval * symbolLen);
@@ -337,8 +358,16 @@ DSMACPacket *DSMAC::newConnectionRequest(int leaderNodeid) {
 	result->setDstID(leaderNodeid);
 	result->setLeaderNodeid(leaderNodeid);
 	result->setDSMACPacketType(MAC_DSMAC_ASSOCIATE_PACKET);
+
+	result->setSessionIDPkt(getSessionID()); // session ID packet
+
 	result->setSrcID(SELF_MAC_ADDRESS);
 	result->setByteLength(COMMAND_PKT_SIZE);
+
+	trace() << "Transmitting Leader node connection request, SID = " << getSessionID();
+
+	
+	
 	return result;
 }
 
@@ -367,16 +396,37 @@ void DSMAC::fromRadioLayer(cPacket * pkt, double rssi, double lqi)
 		return;
 	}
 
+
 	switch (rcvPacket->getDSMACPacketType()) {
 
 		/* received a BEACON frame */
 		case MAC_DSMAC_BEACON_PACKET: {
+			
+			
 			if (isLeaderNode)
 				break;			//Leader nodes ignore beacons from other leader nodes
 			if (associatedLeaderNode != -1 && associatedLeaderNode != rcvPacket->getLeaderNodeid()) 
 				break;			//Ignore, if associated to another leader node
-			
-			
+
+			if (rcvPacket->getSessionIDPkt() <= getLastLeaderSessionID()) {
+				trace() << "Outdated beacon frame. Ignoring packet. Last LSID on file = " << getLastLeaderSessionID();
+				trace() << "LSID received = " << rcvPacket->getSessionIDPkt();
+				break;			//Ignore, outdated session ID
+			}
+
+
+
+			// Special case for node 5, our malicious node
+			if (SELF_MAC_ADDRESS == 5) {
+				setLastLeaderSessionID(rcvPacket->getSessionIDPkt()); // latest leader id
+				setSessionID(90);
+				
+			} else {
+				setLastLeaderSessionID(rcvPacket->getSessionIDPkt()); // latest leader id
+				setSessionID(getSessionID() + 1);
+			}
+
+
 			//cancel beacon timeout message (if present)
 			cancelTimer(BEACON_TIMEOUT);
 			recvBeacons++;
@@ -419,6 +469,7 @@ void DSMAC::fromRadioLayer(cPacket * pkt, double rssi, double lqi)
 			} else {
 				setTimer(BACK_TO_SETUP, CAPend - offset);
 			}
+			
 
 			receiveBeacon_node(rcvPacket);
 			attemptTransmission("CAP started");
@@ -440,8 +491,35 @@ void DSMAC::fromRadioLayer(cPacket * pkt, double rssi, double lqi)
 			if (rcvPacket->getLeaderNodeid() != SELF_MAC_ADDRESS)
 				break;
 
+
+
+			map <int, int> :: iterator itr; //leader node session ID table
+
+			itr = sessionIDMap.find(rcvPacket->getSrcID());
+
+			trace() << "SID from node: " << rcvPacket->getSessionIDPkt();
+			trace() << "SID stored for node[" << rcvPacket->getSrcID() <<  "] : " << itr->second << "\n\n";
+
+			// if session ID is expired, deny.
+			if (rcvPacket->getSessionIDPkt() <= itr->second) {
+				trace() << "outdated SID from regular node detected: " << rcvPacket->getSessionIDPkt();
+				break;
+			}
+
+			
+			// Update session ID table of node
+			sessionIDMap.erase(rcvPacket->getSrcID());
+			sessionIDMap.insert(pair <int,int> (rcvPacket->getSrcID(), rcvPacket->getSessionIDPkt()));
+
+
+			for(auto elem : sessionIDMap)
+			{
+			   trace() << "MAP CONTENTS for node[" << rcvPacket->getSrcID() << ": " << elem.first << " " << elem.second << "\n";
+			}
+
+
 			if (associationRequest_hub(rcvPacket)) {
-				trace() << "Accepting association request from " << rcvPacket->getSrcID();
+				trace() << "Accepting association request from node [" << rcvPacket->getSrcID() << "] SID = " << getSessionID();
 				// update associatedDevices and reply with an ACK
 				associatedDevices[rcvPacket->getSrcID()] = true;
 				DSMACPacket *ackPacket = new DSMACPacket("Leader node connection response", MAC_LAYER_PACKET);
@@ -766,6 +844,16 @@ void DSMAC::receiveBeacon_node(DSMACPacket *beacon)
 	if (getAssociatedLeaderNode() == -1) 
 		transmitPacket(newConnectionRequest(beacon->getLeaderNodeid()));
 }
+
+
+void DSMAC::setSessionID(int newSessionID) {
+	sessionID = newSessionID;
+}
+
+void DSMAC::setLastLeaderSessionID(int oldSessionID) {
+	lastLeaderSessionID = oldSessionID;
+}
+
 
 // A function to react to packet transmission callback
 // ACTION: Simply transmit next packet from the buffer if associated to PAN

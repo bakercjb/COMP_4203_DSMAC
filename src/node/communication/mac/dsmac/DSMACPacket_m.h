@@ -65,6 +65,7 @@ void doUnpacking(cCommBuffer *b, DSMACGTSspec& a);
  *     int srcID;
  *     int dstID;
  *     int seqNum;
+ *     int sessionIDPkt;
  * 
  *     // those fields belong to beacon packet (MAC_DSMAC_BEACON_PACKET)
  *     int beaconOrder;
@@ -84,6 +85,7 @@ class DSMACPacket : public ::MacPacket
     int srcID_var;
     int dstID_var;
     int seqNum_var;
+    int sessionIDPkt_var;
     int beaconOrder_var;
     int frameOrder_var;
     int BSN_var;
@@ -119,6 +121,8 @@ class DSMACPacket : public ::MacPacket
     virtual void setDstID(int dstID);
     virtual int getSeqNum() const;
     virtual void setSeqNum(int seqNum);
+    virtual int getSessionIDPkt() const;
+    virtual void setSessionIDPkt(int sessionIDPkt);
     virtual int getBeaconOrder() const;
     virtual void setBeaconOrder(int beaconOrder);
     virtual int getFrameOrder() const;

@@ -10,11 +10,14 @@
 //*                                                                          *  
 //****************************************************************************/
 
+
 package node.communication.mac.dsmac;
 
 simple DSMAC like node.communication.mac.iMac {
  parameters:
     //debug parameters
+	
+
 	bool collectTraceInfo = default (false);
 	bool printStateTransitions = default (false);
 
@@ -26,6 +29,7 @@ simple DSMAC like node.communication.mac.iMac {
 	bool enableSlottedCSMA = default (true);
 	bool isFFD = default (false);
 	bool isLeaderNode = default (false);
+
 	bool batteryLifeExtention = default (false);
 
 	int frameOrder = default (4);

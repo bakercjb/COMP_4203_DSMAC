@@ -289,6 +289,7 @@ DSMACPacket::DSMACPacket(const char *name, int kind) : ::MacPacket(name,kind)
     this->srcID_var = 0;
     this->dstID_var = 0;
     this->seqNum_var = 0;
+    this->sessionIDPkt_var = 0;
     this->beaconOrder_var = 0;
     this->frameOrder_var = 0;
     this->BSN_var = 0;
@@ -325,6 +326,7 @@ void DSMACPacket::copy(const DSMACPacket& other)
     this->srcID_var = other.srcID_var;
     this->dstID_var = other.dstID_var;
     this->seqNum_var = other.seqNum_var;
+    this->sessionIDPkt_var = other.sessionIDPkt_var;
     this->beaconOrder_var = other.beaconOrder_var;
     this->frameOrder_var = other.frameOrder_var;
     this->BSN_var = other.BSN_var;
@@ -345,6 +347,7 @@ void DSMACPacket::parsimPack(cCommBuffer *b)
     doPacking(b,this->srcID_var);
     doPacking(b,this->dstID_var);
     doPacking(b,this->seqNum_var);
+    doPacking(b,this->sessionIDPkt_var);
     doPacking(b,this->beaconOrder_var);
     doPacking(b,this->frameOrder_var);
     doPacking(b,this->BSN_var);
@@ -362,6 +365,7 @@ void DSMACPacket::parsimUnpack(cCommBuffer *b)
     doUnpacking(b,this->srcID_var);
     doUnpacking(b,this->dstID_var);
     doUnpacking(b,this->seqNum_var);
+    doUnpacking(b,this->sessionIDPkt_var);
     doUnpacking(b,this->beaconOrder_var);
     doUnpacking(b,this->frameOrder_var);
     doUnpacking(b,this->BSN_var);
@@ -425,6 +429,16 @@ int DSMACPacket::getSeqNum() const
 void DSMACPacket::setSeqNum(int seqNum)
 {
     this->seqNum_var = seqNum;
+}
+
+int DSMACPacket::getSessionIDPkt() const
+{
+    return sessionIDPkt_var;
+}
+
+void DSMACPacket::setSessionIDPkt(int sessionIDPkt)
+{
+    this->sessionIDPkt_var = sessionIDPkt;
 }
 
 int DSMACPacket::getBeaconOrder() const
@@ -552,7 +566,7 @@ const char *DSMACPacketDescriptor::getProperty(const char *propertyname) const
 int DSMACPacketDescriptor::getFieldCount(void *object) const
 {
     cClassDescriptor *basedesc = getBaseClassDescriptor();
-    return basedesc ? 11+basedesc->getFieldCount(object) : 11;
+    return basedesc ? 12+basedesc->getFieldCount(object) : 12;
 }
 
 unsigned int DSMACPacketDescriptor::getFieldTypeFlags(void *object, int field) const
@@ -574,9 +588,10 @@ unsigned int DSMACPacketDescriptor::getFieldTypeFlags(void *object, int field) c
         FD_ISEDITABLE,
         FD_ISEDITABLE,
         FD_ISEDITABLE,
+        FD_ISEDITABLE,
         FD_ISARRAY | FD_ISCOMPOUND,
     };
-    return (field>=0 && field<11) ? fieldTypeFlags[field] : 0;
+    return (field>=0 && field<12) ? fieldTypeFlags[field] : 0;
 }
 
 const char *DSMACPacketDescriptor::getFieldName(void *object, int field) const
@@ -593,6 +608,7 @@ const char *DSMACPacketDescriptor::getFieldName(void *object, int field) const
         "srcID",
         "dstID",
         "seqNum",
+        "sessionIDPkt",
         "beaconOrder",
         "frameOrder",
         "BSN",
@@ -600,7 +616,7 @@ const char *DSMACPacketDescriptor::getFieldName(void *object, int field) const
         "GTSlength",
         "GTSlist",
     };
-    return (field>=0 && field<11) ? fieldNames[field] : NULL;
+    return (field>=0 && field<12) ? fieldNames[field] : NULL;
 }
 
 int DSMACPacketDescriptor::findField(void *object, const char *fieldName) const
@@ -612,12 +628,13 @@ int DSMACPacketDescriptor::findField(void *object, const char *fieldName) const
     if (fieldName[0]=='s' && strcmp(fieldName, "srcID")==0) return base+2;
     if (fieldName[0]=='d' && strcmp(fieldName, "dstID")==0) return base+3;
     if (fieldName[0]=='s' && strcmp(fieldName, "seqNum")==0) return base+4;
-    if (fieldName[0]=='b' && strcmp(fieldName, "beaconOrder")==0) return base+5;
-    if (fieldName[0]=='f' && strcmp(fieldName, "frameOrder")==0) return base+6;
-    if (fieldName[0]=='B' && strcmp(fieldName, "BSN")==0) return base+7;
-    if (fieldName[0]=='C' && strcmp(fieldName, "CAPlength")==0) return base+8;
-    if (fieldName[0]=='G' && strcmp(fieldName, "GTSlength")==0) return base+9;
-    if (fieldName[0]=='G' && strcmp(fieldName, "GTSlist")==0) return base+10;
+    if (fieldName[0]=='s' && strcmp(fieldName, "sessionIDPkt")==0) return base+5;
+    if (fieldName[0]=='b' && strcmp(fieldName, "beaconOrder")==0) return base+6;
+    if (fieldName[0]=='f' && strcmp(fieldName, "frameOrder")==0) return base+7;
+    if (fieldName[0]=='B' && strcmp(fieldName, "BSN")==0) return base+8;
+    if (fieldName[0]=='C' && strcmp(fieldName, "CAPlength")==0) return base+9;
+    if (fieldName[0]=='G' && strcmp(fieldName, "GTSlength")==0) return base+10;
+    if (fieldName[0]=='G' && strcmp(fieldName, "GTSlist")==0) return base+11;
     return basedesc ? basedesc->findField(object, fieldName) : -1;
 }
 
@@ -640,9 +657,10 @@ const char *DSMACPacketDescriptor::getFieldTypeString(void *object, int field) c
         "int",
         "int",
         "int",
+        "int",
         "DSMACGTSspec",
     };
-    return (field>=0 && field<11) ? fieldTypeStrings[field] : NULL;
+    return (field>=0 && field<12) ? fieldTypeStrings[field] : NULL;
 }
 
 const char *DSMACPacketDescriptor::getFieldProperty(void *object, int field, const char *propertyname) const
@@ -671,7 +689,7 @@ int DSMACPacketDescriptor::getArraySize(void *object, int field) const
     }
     DSMACPacket *pp = (DSMACPacket *)object; (void)pp;
     switch (field) {
-        case 10: return pp->getGTSlistArraySize();
+        case 11: return pp->getGTSlistArraySize();
         default: return 0;
     }
 }
@@ -691,12 +709,13 @@ std::string DSMACPacketDescriptor::getFieldAsString(void *object, int field, int
         case 2: return long2string(pp->getSrcID());
         case 3: return long2string(pp->getDstID());
         case 4: return long2string(pp->getSeqNum());
-        case 5: return long2string(pp->getBeaconOrder());
-        case 6: return long2string(pp->getFrameOrder());
-        case 7: return long2string(pp->getBSN());
-        case 8: return long2string(pp->getCAPlength());
-        case 9: return long2string(pp->getGTSlength());
-        case 10: {std::stringstream out; out << pp->getGTSlist(i); return out.str();}
+        case 5: return long2string(pp->getSessionIDPkt());
+        case 6: return long2string(pp->getBeaconOrder());
+        case 7: return long2string(pp->getFrameOrder());
+        case 8: return long2string(pp->getBSN());
+        case 9: return long2string(pp->getCAPlength());
+        case 10: return long2string(pp->getGTSlength());
+        case 11: {std::stringstream out; out << pp->getGTSlist(i); return out.str();}
         default: return "";
     }
 }
@@ -716,11 +735,12 @@ bool DSMACPacketDescriptor::setFieldAsString(void *object, int field, int i, con
         case 2: pp->setSrcID(string2long(value)); return true;
         case 3: pp->setDstID(string2long(value)); return true;
         case 4: pp->setSeqNum(string2long(value)); return true;
-        case 5: pp->setBeaconOrder(string2long(value)); return true;
-        case 6: pp->setFrameOrder(string2long(value)); return true;
-        case 7: pp->setBSN(string2long(value)); return true;
-        case 8: pp->setCAPlength(string2long(value)); return true;
-        case 9: pp->setGTSlength(string2long(value)); return true;
+        case 5: pp->setSessionIDPkt(string2long(value)); return true;
+        case 6: pp->setBeaconOrder(string2long(value)); return true;
+        case 7: pp->setFrameOrder(string2long(value)); return true;
+        case 8: pp->setBSN(string2long(value)); return true;
+        case 9: pp->setCAPlength(string2long(value)); return true;
+        case 10: pp->setGTSlength(string2long(value)); return true;
         default: return false;
     }
 }
@@ -734,7 +754,7 @@ const char *DSMACPacketDescriptor::getFieldStructName(void *object, int field) c
         field -= basedesc->getFieldCount(object);
     }
     switch (field) {
-        case 10: return opp_typename(typeid(DSMACGTSspec));
+        case 11: return opp_typename(typeid(DSMACGTSspec));
         default: return NULL;
     };
 }
@@ -749,7 +769,7 @@ void *DSMACPacketDescriptor::getFieldStructPointer(void *object, int field, int 
     }
     DSMACPacket *pp = (DSMACPacket *)object; (void)pp;
     switch (field) {
-        case 10: return (void *)(&pp->getGTSlist(i)); break;
+        case 11: return (void *)(&pp->getGTSlist(i)); break;
         default: return NULL;
     }
 }

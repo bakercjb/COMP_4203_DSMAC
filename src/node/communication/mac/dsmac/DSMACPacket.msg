@@ -36,6 +36,7 @@ packet DSMACPacket extends MacPacket {
 	int srcID;
 	int dstID;
 	int seqNum;
+	int sessionIDPkt;
 
 	// those fields belong to beacon packet (MAC_DSMAC_BEACON_PACKET)
 	int beaconOrder;
