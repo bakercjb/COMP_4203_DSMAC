@@ -25,7 +25,7 @@ module Node {
 	double zCoor = default (0);
 	double phi = default (0);
 	double theta = default (0);
-	
+
 	double startupOffset = default (0);							//node startup offset (i.e. delay), in seconds 
 	double startupRandomization = default (0.05);				//node startup randomisation, in seconds
 	// Node will become active startupOffset + random(startupRandomization) 

@@ -142,9 +142,9 @@ class DSMAC: public VirtualMac {
 
 	int associatedLeaderNode;	// ID of current LeaderNode (-1 if not associated)
 	int sessionID; // current session id of node
-	int lastLeaderSessionID;
-	map<int,int> sessionIDMap;
-	//vector <int> blacklist;
+	int lastLeaderSessionID; // last session id of leader received by node
+	map<int,int> sessionIDMap; // map of all session ids held by leader node
+
 
   protected:
 

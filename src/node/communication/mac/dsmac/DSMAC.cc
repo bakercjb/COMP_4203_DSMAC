@@ -28,8 +28,6 @@ void DSMAC::startup()
 
 	isLeaderNode = par("isLeaderNode");
 	isFFD = par("isFFD");
-	//leaderPassword = par("leaderPassword");
-
 
 	// CAP-related parameters
 	minCAPLength = par("minCAPLength");
@@ -118,7 +116,7 @@ void DSMAC::startup()
 		sessionIDMap.insert(pair <int,int> (2, 100));
 		sessionIDMap.insert(pair <int,int> (3, 100));
 		sessionIDMap.insert(pair <int,int> (4, 100));
-		sessionIDMap.insert(pair <int,int> (5, 90)); //outdated for "malicious node"
+		sessionIDMap.insert(pair <int,int> (5, 90)); //outdated SID for "malicious node"
 
 		setTimer(FRAME_START, 0);	//frame start is NOW
 	}
@@ -269,6 +267,7 @@ void DSMAC::timerFiredCallback(int index)
 			cancelTimer(PERFORM_CCA);
 			setMacState(MAC_STATE_SLEEP);
 			toRadioLayer(createRadioCommand(SET_STATE, SLEEP));
+			trace() << "SLEEP STARTED FOR A NODE\n";
 			break;
 		}
 		
@@ -514,7 +513,7 @@ void DSMAC::fromRadioLayer(cPacket * pkt, double rssi, double lqi)
 
 			for(auto elem : sessionIDMap)
 			{
-			   trace() << "MAP CONTENTS for node[" << rcvPacket->getSrcID() << ": " << elem.first << " " << elem.second << "\n";
+			   trace() << "MAP CONTENTS for node[" << rcvPacket->getSrcID() << "]:" << " " << elem.second << "\n";
 			}
 
 

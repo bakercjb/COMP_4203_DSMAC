@@ -120,4 +120,55 @@
 - zeromq                    4.2.3                h439df22_3  
 - zlib                      1.2.11               ha838bed_2 
 
+## DSMAC Protocol specific notes
 
+To run DSMAC (after configuring Castalia and its dependencies) open a terminal in "Castalia/Simulations/4203_demo" and run the following command:
+
+../../bin/Castalia -c DSMAC
+
+As-is, this command will run DSMAC under an intelligent replay attack from node 5. To run DSMAC normally, a single value must be edited in "Castalia/Simulations/4203_demo/omnetpp.ini", specifically line 123 which holds the following value: 
+
+SN.node[5].Application.packet_rate = 100
+
+This value indicates a higher than normal packet rate for node 5, relative to the other nodes. To get normal packet rate behaviour for node 5, change the value to equal 10. Unfortunately, there is another change that must be done to the DSMAC protocol itself to allow normal network behaviour.
+
+The protocol itself resides in "Castalia/src/node/communication/mac/dsmac/"
+For the intelligent replay attack, we hardcoded node 5's initial SID to be outdated, and we made it persistently outdated.
+
+line 119 in DSMAC.cc should hold:
+
+		sessionIDMap.insert(pair <int,int> (5, 90)); //outdated SID
+
+change this value to:
+		sessionIDMap.insert(pair <int,int> (5, 100));
+
+to match the rest of the network.
+
+
+The final change needed to enable normal network conditions is on line 419 in DSMAC.cc:
+
+// Special case for node 5, our malicious node
+			if (SELF_MAC_ADDRESS == 5) {
+				setLastLeaderSessionID(rcvPacket->getSessionIDPkt()); // latest leader id
+				setSessionID(90);	
+			}
+
+
+change:	setSessionID(90);	
+to the following: setSessionID(getSessionID() + 1);
+
+this will allow node 5 to update its SID normally.
+
+
+Once these steps are completed, you must then run "make" in the "/Castalia/" directory, and you are then ready to run the DSMAC simulation again under normal network conditions!
+
+
+To run TMAC, simply edit node 5's packet rate accordingly as seen for DSMAC in "Castalia/Simulations/4203_demo/omnetpp.ini" (abnormal node 5 for replay attack, symmetric packet rate for normal conditions) then run the following command in "Castalia/Simulations/4203_demo":
+
+../../bin/Castalia -c TMAC
+
+
+When running these simulations (TMAC or DSMAC), you can view the results by opening the "CastaliaTrace.txt" file generated in "Castalia/Simulations/4203_demo" to see a detailed breakdown of the simulations work! We hope you enjoy!
+
+
+The files in "Castalia/src/node/communication/mac/dsmac/" were developed by our team, where DSMAC specific terms such as "sessionid", "LSID", "SID", and "leadernode" can be found within. A query of these key terms will bring you to key components of DSMAC, where further understandings of our work can be found.
