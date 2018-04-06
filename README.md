@@ -120,6 +120,9 @@
 - zeromq                    4.2.3                h439df22_3  
 - zlib                      1.2.11               ha838bed_2 
 
+start visualization with
+$ python simulation_demo.py Simulations/projCode/
+
 ## DSMAC Protocol specific notes
 
 To run DSMAC (after configuring Castalia and its dependencies) open a terminal in "Castalia/Simulations/4203_demo" and run the following command:
